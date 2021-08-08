@@ -49,7 +49,7 @@ class EventDetails {
     lateinit var latitude: String
 }
 
-lateinit var CITY: String
+var CITY = "Mountain View"
 lateinit var temp: String
 lateinit var conditions: String
 lateinit var iconURL: String
