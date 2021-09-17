@@ -52,77 +52,85 @@ class MainActivity : AppCompatActivity() {
 
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
-        val scope = CoroutineScope(Job() + Dispatchers.Main)
-        scope.launch {
-            val getLocationJob = async { getLocation(this@MainActivity) }
-            CITY = getLocationJob.await()
+        val requestPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()
+        ) { isGranted: Boolean ->
+            Log.d("isGranted", "isGranted = $isGranted")
+            if (isGranted) {
+                val scope = CoroutineScope(Job() + Dispatchers.Main)
+                scope.launch {
+                    val getLocationJob = async { getLocation(this@MainActivity) }
+                    CITY = getLocationJob.await()
 
 
 //        main()
 
 
-            // Instantiate the RequestQueue.
-            val queue = Volley.newRequestQueue(this@MainActivity)
-            val weatherurl =
-                "https://api.openweathermap.org/data/2.5/weather?q=$CITY&units=imperial&appid=$API"
+                    // Instantiate the RequestQueue.
+                    val queue = Volley.newRequestQueue(this@MainActivity)
+                    val weatherurl =
+                        "https://api.openweathermap.org/data/2.5/weather?q=$CITY&units=imperial&appid=$API"
 
-            val jsonObjectRequest = JsonObjectRequest(
-                Request.Method.GET, weatherurl, null,
-                { response ->
-                    val main = response.getJSONObject("main")
-                    temp = main.getString("temp") + "\u2103"
-                    val weather = response.getJSONArray("weather")
-                    conditions = weather.getJSONObject(0).getString("main")
-                    val icon = weather.getJSONObject(0).getString("icon")
-                    iconURL = "https://openweathermap.org/img/w/$icon.png"
-                    Log.d("response", "Post API response = $response")
-                },
-                { error -> Log.d("error", "Post API error = $error") })
-            queue.add(jsonObjectRequest)
+                    val jsonObjectRequest = JsonObjectRequest(
+                        Request.Method.GET, weatherurl, null,
+                        { response ->
+                            val main = response.getJSONObject("main")
+                            temp = main.getString("temp") + "\u2103"
+                            val weather = response.getJSONArray("weather")
+                            conditions = weather.getJSONObject(0).getString("main")
+                            val icon = weather.getJSONObject(0).getString("icon")
+                            iconURL = "https://openweathermap.org/img/w/$icon.png"
+                            Log.d("response", "Post API response = $response")
+                        },
+                        { error -> Log.d("error", "Post API error = $error") })
+                    queue.add(jsonObjectRequest)
 
-            val textView = findViewById<TextView>(R.id.text)
-            // ...
+                    val textView = findViewById<TextView>(R.id.text)
+                    // ...
 
-            // Instantiate the RequestQueue.
-            val city = "Denver"
-            val url =
-                "https://app.ticketmaster.com/discovery/v2/events.json?city=$city&apikey=t3Pw9IXSSkl3TrReE9v2nrm238YfhoXb"
-
-
-            // Request a string response from the provided URL.
-            val jsonRequest = JsonObjectRequest(
-                Request.Method.GET, url, null,
-                { response ->
-                    // Display the first 500 characters of the response string.
-                    val jsonObject = response.getJSONObject("_embedded")
-                    val eventsArr = jsonObject.getJSONArray("events")
-
-                    for (i in 0 until eventsArr.length()) {
-                        val event = eventsArr.getJSONObject(i)
-                        val eventInstance = EventDetails()
-                        val addressObject =
-                            event.getJSONObject("_embedded").getJSONArray("venues").getJSONObject(0)
+                    // Instantiate the RequestQueue.
+                    val city = "Denver"
+                    val url =
+                        "https://app.ticketmaster.com/discovery/v2/events.json?city=$city&apikey=t3Pw9IXSSkl3TrReE9v2nrm238YfhoXb"
 
 
-                        eventInstance.title = event.getString("name")
-                        eventInstance.address =
-                            addressObject.getJSONObject("address").optString("line1")
-                        val longitude =
-                            addressObject.getJSONObject("location").optString("longitude")
-                        val latitude = addressObject.getJSONObject("location").optString("latitude")
-                        eventInstance.longitude = longitude
-                        eventInstance.latitude = latitude
-                        Log.d("Latitude", "Latitude = $latitude")
-                        Log.d("Longitude", "Longitude = $longitude")
+                    // Request a string response from the provided URL.
+                    val jsonRequest = JsonObjectRequest(
+                        Request.Method.GET, url, null,
+                        { response ->
+                            // Display the first 500 characters of the response string.
+                            val jsonObject = response.getJSONObject("_embedded")
+                            val eventsArr = jsonObject.getJSONArray("events")
 
-                        listOfEvents.add(eventInstance)
-                    }
-                },
-                { error -> Log.d("error", error.toString()) })
-            queue.add(jsonRequest)
+                            for (i in 0 until eventsArr.length()) {
+                                val event = eventsArr.getJSONObject(i)
+                                val eventInstance = EventDetails()
+                                val addressObject =
+                                    event.getJSONObject("_embedded").getJSONArray("venues")
+                                        .getJSONObject(0)
 
 
+                                eventInstance.title = event.getString("name")
+                                eventInstance.address =
+                                    addressObject.getJSONObject("address").optString("line1")
+                                val longitude =
+                                    addressObject.getJSONObject("location").optString("longitude")
+                                val latitude =
+                                    addressObject.getJSONObject("location").optString("latitude")
+                                eventInstance.longitude = longitude
+                                eventInstance.latitude = latitude
+                                Log.d("Latitude", "Latitude = $latitude")
+                                Log.d("Longitude", "Longitude = $longitude")
+
+                                listOfEvents.add(eventInstance)
+                            }
+                        },
+                        { error -> Log.d("error", error.toString()) })
+                    queue.add(jsonRequest)
+
+                }
+            }
         }
+        requestPermissionLauncher.launch(Manifest.permission.ACCESS_COARSE_LOCATION)
 
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
@@ -155,30 +163,30 @@ class MainActivity : AppCompatActivity() {
         var addressList: List<Address?>
         var address = "Dallas"
 
-        val requestPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()
-                ) { isGranted: Boolean ->
-                    if (isGranted) {
-                        if (ActivityCompat.checkSelfPermission(
-                                        context,
-                                        Manifest.permission.ACCESS_COARSE_LOCATION
-                                ) == PackageManager.PERMISSION_GRANTED
-                        ) {fusedLocationClient.lastLocation.addOnSuccessListener { location: Location? ->
-                                if (location != null) {
-                                    lat = location.latitude
-                                    lon = location.longitude
-                                    addressList = geocoder.getFromLocation(lat, lon, 1)
-                                    address = addressList[0]!!.locality
-                                    Log.d("address", "address = $addressList")
-                                    Log.d("address", "address = $address")
-                                    CITY = address
-                                }
-                            }
-                        }
-
-                    }
+        Log.d("Permissions", "permission = ${ActivityCompat.checkSelfPermission(
+            context,
+            Manifest.permission.ACCESS_COARSE_LOCATION
+        )}")
+        Log.d("PackageManger", "PMPG = ${PackageManager.PERMISSION_GRANTED}")
+        if (ActivityCompat.checkSelfPermission(
+                context,
+                Manifest.permission.ACCESS_COARSE_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED
+        ) {
+            fusedLocationClient.lastLocation.addOnSuccessListener { location: Location? ->
+                Log.d("location inside", "location = $location")
+                if (location != null) {
+                    lat = location.latitude
+                    lon = location.longitude
+                    addressList = geocoder.getFromLocation(lat, lon, 1)
+                    address = addressList[0]!!.locality
+                    Log.d("address", "address = $addressList")
+                    Log.d("address", "address = $address")
+                    CITY = address
                 }
+            }
+        }
 
-        requestPermissionLauncher.launch(Manifest.permission.ACCESS_COARSE_LOCATION)
         Log.d("address outside of call", "address = $address")
         address
     }
